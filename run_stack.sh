@@ -24,6 +24,8 @@ QUANTUM_CLIENT_DIR=$DEST/python-quantumclient
 RYU_DIR=$DEST/ryu
 JANUS_DIR=$DEST/janus
 WHALE_DIR=$DEST/whale
+KEYSTONE_DIR=$DEST/keystone
+GRAPH_DB_DIR=/etc/init.d
 
 if [[ "$Q_PLUGIN" = "ryu" ]]; then
     AGENT_BINARY="$QUANTUM_DIR/bin/quantum-ryu-agent"
@@ -37,6 +39,9 @@ else
     echo "ERROR: Unknown Quantum plugin"
     exit 1
 fi
+
+KEYSTONE_CONF=/etc/keystone/keystone.conf
+
 AGENT_DHCP_BINARY="$QUANTUM_DIR/bin/quantum-dhcp-agent"
 AGENT_L3_BINARY="$QUANTUM_DIR/bin/quantum-l3-agent"
 Q_L3_CONF_FILE=/etc/quantum/l3_agent.ini
@@ -118,7 +123,11 @@ echo test n-bmd "cd $NOVA_DIR && $NOVA_BIN_DIR/bm_deploy_server --config-dir=$BM
 echo test n-cpu-bm "cd $NOVA_DIR && sg libvirtd \"$NOVA_BIN_DIR/nova-compute --config-dir=$BM_CONF\" $NL"
 echo test n-cpu-bee2 "cd $NOVA_DIR && sg libvirtd \"$NOVA_BIN_DIR/nova-compute --config-dir=$BEE2_CONF\" $NL"
 
-screen_it neo4j "cd $GRAPH_DB_DIR && $GRAPH_DB_DIR/bin/neo4j console"
+screen_it key "cd $KEYSTONE_DIR && $KEYSTONE_DIR/bin/keystone-all --config-file $KEYSTONE_CONF $KEYSTONE_LOG_CONFIG -d --debug"
+sleep 3
+sudo $GRAPH_DB_DIR/neo4j-service stop
+sleep 2
+screen_it neo4j "cd $GRAPH_DB_DIR && sudo -u neo4j $GRAPH_DB_DIR/neo4j-service console"
 sleep 10
 screen_it w-sync "cd $WHALE_DIR && $WHALE_DIR/bin/whale-init --config-file /etc/whale/whale.conf"
 sleep 10
@@ -127,9 +136,6 @@ sleep 5
 screen_it janus "cd $JANUS_DIR && $JANUS_DIR/bin/janus-init --config-file /etc/janus/janus.conf"
 sleep 5
 screen_it  ryu "cd $RYU_DIR && $RYU_DIR/bin/ryu-manager --flagfile $RYU_CONF --app_lists ryu.app.ofctl_rest,ryu.app.ryu2janus,ryu.app.discovery,ryu.app.rest_discovery"
-sleep 5
-screen_it  n-api "cd $NOVA_DIR && $NOVA_BIN_DIR/nova-api"
-screen_it  g-api "cd $GLANCE_DIR; $GLANCE_BIN_DIR/glance-api --config-file=$GLANCE_CONF_DIR/glance-api.conf"
 screen_it  q-svc "cd $QUANTUM_DIR && python $QUANTUM_DIR/bin/quantum-server --config-file $Q_CONF_FILE --config-file /$Q_PLUGIN_CONF_FILE"
 sleep 10
 screen_it  q-dhcp "python $AGENT_DHCP_BINARY --config-file $Q_CONF_FILE --config-file=$Q_DHCP_CONF_FILE"
@@ -138,6 +144,10 @@ screen_it  q-l3 "python $AGENT_L3_BINARY --config-file $Q_CONF_FILE --config-fil
 sleep 5
 screen_it  q-agt "python $AGENT_BINARY --config-file $Q_CONF_FILE --config-file /$Q_PLUGIN_CONF_FILE"
 sleep 5
+screen_it  n-api "cd $NOVA_DIR && $NOVA_BIN_DIR/nova-api"
+screen_it  g-reg "cd $GLANCE_DIR; $GLANCE_BIN_DIR/glance-registry --config-file=$GLANCE_CONF_DIR/glance-registry.conf"
+screen_it  g-api "cd $GLANCE_DIR; $GLANCE_BIN_DIR/glance-api --config-file=$GLANCE_CONF_DIR/glance-api.conf"
+
 #screen_it  n-cpu "cd $NOVA_DIR && sg libvirtd $NOVA_BIN_DIR/nova-compute"
 screen_it  n-crt "cd $NOVA_DIR && $NOVA_BIN_DIR/nova-cert"
 #screen_it  n-net "cd $NOVA_DIR && $NOVA_BIN_DIR/nova-network"
@@ -175,9 +185,9 @@ echo "done baremetal local.sh"
 
 QR_NS=`sudo ip netns list | grep qr`
 
-sudo ip link set p3 netns $QR_NS
+#sudo ip link set p3 netns $QR_NS
 
-$TOP_DIR/tests/netns-run.sh $QR_NS "ifconfig p3 10.60.10.2/24 up"
+#$TOP_DIR/tests/netns-run.sh $QR_NS "ifconfig p3 10.60.10.2/24 up"
 
 #sudo ovs-vsctl --no-wait -- --may-exist add-port br-ex p4 -- set interface p4 type=internal
 #sudo ip link set eth7 netns $QR_NS

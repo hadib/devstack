@@ -1,42 +1,14 @@
-#!/usr/bin/env bash
-# upload_image.sh - Retrieve and upload an image into Glance
-#
-# upload_image.sh <image-url>
-#
-# Assumes credentials are set via OS_* environment variables
+#!/bin/bash
 
-function usage {
-    echo "$0 - Retrieve and upload an image into Glance"
-    echo ""
-    echo "Usage: $0 <image-url> [...]"
-    echo ""
-    echo "Assumes credentials are set via OS_* environment variables"
-    exit 1
-}
+source ~/devstack/functions
+DEST=~
+IMG=$1
 
-# Keep track of the current directory
-TOOLS_DIR=$(cd $(dirname "$0") && pwd)
-TOP_DIR=$(cd $TOOLS_DIR/..; pwd)
+REAL_KERNEL_ID=$(glance image-create --name "baremetal-64-real-kernel" --public --container-format aki --disk-format aki < "$DEST/kernel" | grep ' id ' | get_field 2)
 
-# Import common functions
-source $TOP_DIR/functions
+#REAL_RAMDISK_ID=$(glance --os-auth-token $TOKEN --os-image-url http://$GLANCE_HOSTPORT image-create --name "baremetal-real-ramdisk" --public --container-format ari --disk-format ari < "$DEST/initrd" | grep ' id ' | get_field 2)
+REAL_RAMDISK_ID=$(glance image-create --name "baremetal-64-real-ramdisk" --public --container-format ari --disk-format ari < "$DEST/initrd" | grep ' id ' | get_field 2)
 
-# Import configuration
-source $TOP_DIR/openrc "" "" "" ""
+#glance --os-auth-token $TOKEN --os-image-url http://$GLANCE_HOSTPORT image-create --name "Ubuntu" --public --container-format bare --disk-format raw --property kernel_id=$REAL_KERNEL_ID --property ramdisk_id=$REAL_RAMDISK_ID < "$IMG"
+glance image-create --name "Ubuntu64" --public --container-format bare --disk-format raw --property kernel_id=$REAL_KERNEL_ID --property ramdisk_id=$REAL_RAMDISK_ID < "$IMG"
 
-# Find the cache dir
-FILES=$TOP_DIR/files
-
-if [[ -z "$1" ]]; then
-    usage
-fi
-
-# Get a token to authenticate to glance
-TOKEN=$(keystone token-get | grep ' id ' | get_field 2)
-
-# Glance connection info.  Note the port must be specified.
-GLANCE_HOSTPORT=${GLANCE_HOSTPORT:-$GLANCE_HOST:9292}
-
-for IMAGE in "$*"; do
-    upload_image $IMAGE $TOKEN
-done

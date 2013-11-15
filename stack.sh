@@ -1496,8 +1496,11 @@ EOF
         #screen_it ryu "cd $RYU_DIR && $RYU_DIR/bin/ryu-manager --flagfile $RYU_CONF --app_lists ryu.app.rest,ryu.app.tr-edge-isolation"
         #screen_it ryu "cd $RYU_DIR && $RYU_DIR/bin/ryu-manager --flagfile $RYU_CONF --app_lists ryu.app.rest,ryu.app.simple_switch"
         #screen_it ryu "cd $RYU_DIR && $RYU_DIR/bin/ryu-manager --flagfile $RYU_CONF --app_lists ryu.app.rest,ryu.app.configurable_device"
-        screen_it ryu "cd $RYU_DIR && $RYU_DIR/bin/ryu-manager --flagfile $RYU_CONF --app_lists ryu.app.rest,ryu.app.tr-edge-isolation"
-    elif [[ "$Q_PLUGIN" = "janus" ]]; then
+        #screen_it ryu "cd $RYU_DIR && $RYU_DIR/bin/ryu-manager --flagfile $RYU_CONF --app_lists ryu.app.rest,ryu.app.tr-edge-isolation"
+    fi
+fi
+
+if [[ "$Q_PLUGIN" = "janus" ]]; then
         if is_service_enabled ryu; then
             # launch ryu manager
             RYU_CONF_DIR=/etc/ryu
@@ -1515,6 +1518,7 @@ EOF
 --ofp_tcp_listen_port=$RYU_OFP_PORT
 --janus_host=$JANUS_API_HOST
 --janus_port=$JANUS_API_PORT
+--api_db_url=$BASE_SQL_CONN/janus?charset=utf8
 EOF
 
             # Start Janus first (otherwise Ryu may attempt to send RESTful calls to Janus prior to Janus being active)
@@ -1524,8 +1528,8 @@ EOF
             #screen_it ryu "cd $RYU_DIR && $RYU_DIR/bin/ryu-manager --flagfile $RYU_CONF --app_lists ryu.app.ofctl_rest,ryu.app.ryu2janus"
             sleep 5
         fi
-    fi
 fi
+
 # Quantum agent (for compute nodes)
 if is_service_enabled q-agt; then
     # Configure agent for plugin
@@ -1536,8 +1540,8 @@ if is_service_enabled q-agt; then
         # Setup integration bridge
         OVS_BRIDGE=${OVS_BRIDGE:-br-int}
         quantum_setup_ovs_bridge $OVS_BRIDGE
-        sudo ovs-vsctl --no-wait add-port $OVS_BRIDGE $FLAT_INTERFACE
-        sudo ifconfig $FLAT_INTERFACE up
+        #sudo ovs-vsctl --no-wait add-port $OVS_BRIDGE $FLAT_INTERFACE
+        #sudo ifconfig $FLAT_INTERFACE up
 
         iniset /$Q_PLUGIN_CONF_FILE OVS integration_bridge $OVS_BRIDGE
 
@@ -1935,9 +1939,9 @@ EOF
             log_facility=$(( ${log_facility} + 1 ))
         done
     }
-    generate_swift_configuration object 6010 2
-    generate_swift_configuration container 6011 2
-    generate_swift_configuration account 6012 2
+    generate_swift_configuration object 6110 2
+    generate_swift_configuration container 6111 2
+    generate_swift_configuration account 6112 2
 
     # Specific configuration for swift for rsyslog. See
     # ``/etc/rsyslog.d/10-swift.conf`` for more info.
@@ -1955,7 +1959,7 @@ EOF
 
         rm -f *.builder *.ring.gz backups/*.builder backups/*.ring.gz
 
-        port_number=6010
+        port_number=6110
         swift-ring-builder object.builder create ${SWIFT_PARTITION_POWER_SIZE} ${SWIFT_REPLICAS} 1
         for x in $(seq ${SWIFT_REPLICAS}); do
             swift-ring-builder object.builder add z${x}-127.0.0.1:${port_number}/sdb1 1
@@ -1963,7 +1967,7 @@ EOF
         done
         swift-ring-builder object.builder rebalance
 
-        port_number=6011
+        port_number=6111
         swift-ring-builder container.builder create ${SWIFT_PARTITION_POWER_SIZE} ${SWIFT_REPLICAS} 1
         for x in $(seq ${SWIFT_REPLICAS}); do
             swift-ring-builder container.builder add z${x}-127.0.0.1:${port_number}/sdb1 1
@@ -1971,7 +1975,7 @@ EOF
         done
         swift-ring-builder container.builder rebalance
 
-        port_number=6012
+        port_number=6112
         swift-ring-builder account.builder create ${SWIFT_PARTITION_POWER_SIZE} ${SWIFT_REPLICAS} 1
         for x in $(seq ${SWIFT_REPLICAS}); do
             swift-ring-builder account.builder add z${x}-127.0.0.1:${port_number}/sdb1 1
