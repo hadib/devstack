@@ -138,6 +138,8 @@ function configure_nova_rootwrap() {
 
 # configure_nova() - Set config files, create data dirs, etc
 function configure_nova() {
+    sudo pip install pysensors
+
     setup_develop $NOVA_DIR
 
     # Put config files in ``/etc/nova`` for everyone to find

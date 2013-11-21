@@ -50,7 +50,7 @@ fi
 # Glance connection info.  Note the port must be specified.
 WHALE_HOST=${WHALE_HOST:-$SERVICE_HOST}
 WHALE_PORT=${WHALE_PORT:-9976}
-WHALE_SERVICE_HOST=${WHALE_SERVICE_HOST:-$PUBLIC_SERVICE_HOST}
+WHALE_SERVICE_HOST=${WHALE_SERVICE_HOST:-$HOST_IP}
 WHALE_SERVICE_PORT=${WHALE_SERVICE_PORT:-8976}
 WHALE_SERVICE_PROTOCOL=${WHALE_SERVICE_PROTOCOL:-http}
 
@@ -67,6 +67,8 @@ GRAPH_DB_HOST=${GRAPH_DB_HOST:-$WHALE_HOST}
 GRAPH_DB_PORT=${GRAPH_DB_PORT:-7474}
 GRAPH_DB_PROTOCOL=${GRAPH_DB_PROTOCOL:-http}
 GRAPH_DB_URI=$GRAPH_DB_PROTOCOL://$GRAPH_DB_HOST:$GRAPH_DB_PORT/db/data
+
+OFI_RYU_DRIVER=whale.network.ryu.driver.RyuNetworkDriver
 # Entry Points
 # ------------
 
@@ -96,19 +98,19 @@ function configure_whale() {
     # Rewrite stock ``keystone.conf``
     iniset $WHALE_CONF sql connection "$BASE_SQL_CONN/nova?charset=utf8"
 
-    iniset $WHALE_CONF filter:authtoken auth_host $GLANCE_REGISTRY_AUTH_HOST
-    iniset $WHALE_CONF filter:authtoken auth_port $GLANCE_REGISTRY_AUTH_PORT
+    iniset $WHALE_CONF filter:authtoken auth_host $KEYSTONE_SERVICE_HOST
+    iniset $WHALE_CONF filter:authtoken auth_port $KEYSTONE_AUTH_PORT
     iniset $WHALE_CONF filter:authtoken auth_protocol $KEYSTONE_AUTH_PROTOCOL
-    iniset $WHALE_CONF filter:authtoken auth_uri $KEYSTONE_SERVICE_PROTOCOL://$GLANCE_REGISTRY_AUTH_HOST:$KEYSTONE_SERVICE_PORT/
+    iniset $WHALE_CONF filter:authtoken auth_uri $KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_AUTH_HOST:$KEYSTONE_SERVICE_PORT/
     iniset $WHALE_CONF filter:authtoken auth_region $REGION_NAME
     iniset $WHALE_CONF filter:authtoken admin_tenant_name $SERVICE_TENANT_NAME
     iniset $WHALE_CONF filter:authtoken admin_user glance
     iniset $WHALE_CONF filter:authtoken admin_password $SERVICE_PASSWORD
 
-    iniset $WHALE_CONF filter:authz auth_host $GLANCE_REGISTRY_AUTH_HOST
-    iniset $WHALE_CONF filter:authz auth_port $GLANCE_REGISTRY_AUTH_PORT
+    iniset $WHALE_CONF filter:authz auth_host $KEYSTONE_SERVICE_HOST
+    iniset $WHALE_CONF filter:authz auth_port $KEYSTONE_AUTH_PORT
     iniset $WHALE_CONF filter:authz auth_protocol $KEYSTONE_AUTH_PROTOCOL
-    iniset $WHALE_CONF filter:authz auth_uri $KEYSTONE_SERVICE_PROTOCOL://$GLANCE_REGISTRY_AUTH_HOST:$KEYSTONE_SERVICE_PORT/
+    iniset $WHALE_CONF filter:authz auth_uri $KEYSTONE_SERVICE_PROTOCOL://$KEYSTONE_SERVICE_HOST:$KEYSTONE_SERVICE_PORT/
     iniset $WHALE_CONF filter:authz auth_region $REGION_NAME
     iniset $WHALE_CONF filter:authz admin_tenant_name $SERVICE_TENANT_NAME
     iniset $WHALE_CONF filter:authz admin_user glance
@@ -118,8 +120,9 @@ function configure_whale() {
     iniset $WHALE_CONF openstack db_user $MYSQL_USER
     iniset $WHALE_CONF openstack db_pass $MYSQL_PASSWORD
 
-    iniset $WHALE_CONF network of_ctrl_host $RYU_OFP_HOST
-    iniset $WHALE_CONF network of_ctrl_port $RYU_OFP_PORT
+    iniset $WHALE_CONF network ofi_drivers  $RYU_OFI_DRIVER
+    iniset $WHALE_CONF network of_ctrl_hosts $RYU_OFP_HOST
+    iniset $WHALE_CONF network of_ctrl_ports $RYU_OFP_PORT
 
     iniset $WHALE_CONF ryu wsapi_host $RYU_API_HOST
     iniset $WHALE_CONF ryu wsapi_port $RYU_API_PORT
@@ -130,7 +133,6 @@ function configure_whale() {
     iniset $WHALE_CONF timeout cloudupdate_timeout $WHALE_CONF_CLOUD_UPDATE_TIMEOUT
     iniset $WHALE_CONF timeout cloudupdate_timeout_v $WHALE_CONF_CLOUD_V_UPDATE_TIMEOUT
     iniset $WHALE_CONF timeout networkupdate_timeout $WHALE_CONF_NETWORK_UPDATE_TIMEOUT
-
 
 }
 
@@ -204,7 +206,9 @@ function restart_graphdb() {
 # start_whale() - Start running processes, including screen
 function start_whale() {
     echo_summary "Starting whale"
+    sleep 5
     screen_it w-sync "cd $WHALE_DIR && $WHALE_DIR/bin/whale-init --config-file $WHALE_CONF"
+    sleep 5
     screen_it w-api "cd $WHALE_DIR && $WHALE_DIR/bin/whale-server --config-file $WHALE_CONF"
 }
 

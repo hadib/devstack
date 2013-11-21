@@ -43,7 +43,7 @@ fi
 # Glance connection info.  Note the port must be specified.
 JANUS_HOST=${JANUS_HOST:-$SERVICE_HOST}
 JANUS_PORT=${JANUS_PORT:-8091}
-JANUS_SERVICE_HOST=${JANUS_SERVICE_HOST:-$PUBLIC_SERVICE_HOST}
+JANUS_SERVICE_HOST=${JANUS_SERVICE_HOST:-$HOST_IP}
 JANUS_SERVICE_PORT=${JANUS_SERVICE_PORT:-8081}
 JANUS_SERVICE_PROTOCOL=${JANUS_SERVICE_PROTOCOL:-http}
 JANUS_INSTALLED_APPS=${JANUS_INSTALLED_APPS:-janus.network,janus.novasch}
@@ -75,6 +75,7 @@ function cleanup_janus() {
 
 # configure_janus() - Set config files, create data dirs, etc
 function configure_janus() {
+    sudo pip install networkx
     setup_develop $JANUS_DIR
 
     if [[ ! -d $JANUS_CONF_DIR ]]; then
