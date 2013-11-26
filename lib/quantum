@@ -33,6 +33,8 @@ function quantum_setup_ovs_bridge() {
     sudo ovs-vsctl --no-wait -- --if-exists del-br $bridge
     sudo ovs-vsctl --no-wait add-br $bridge
     sudo ovs-vsctl --no-wait br-set-external-id $bridge bridge-id $bridge
+    HOST=`hostname -s`
+    sudo ovs-vsctl --no-wait set bridge $bridge other_config:dp-desc="$HOST"
 }
 
 # Restore xtrace
